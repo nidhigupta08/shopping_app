@@ -32,7 +32,7 @@ class ProductCard extends StatelessWidget {
                   product.imageUrl,
                   width: 100,
                   height: 100,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fill,
                   errorBuilder: (context, error, stackTrace) {
                     return const SizedBox(
                       width: 100,
