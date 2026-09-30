@@ -1,9 +1,5 @@
 # Shopping App
 
-Flutter Developer Take-Home Assignment for Creddinv Technologies.
-
-## Overview
-
 A simple Shopping App built using Flutter and Dart. The application demonstrates product listing, product details, navigation, cart management, quantity updates, item removal, and total price calculation.
 
 ## Features
