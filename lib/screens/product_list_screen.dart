@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/product.dart';
-import '../services/product_api_service.dart';
+import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
 import 'product_details_screen.dart';
@@ -14,13 +13,14 @@ class ProductListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartItems = ref.watch(cartProvider);
+    final productsState = ref.watch(productProvider);
 
     final cartCount = cartItems.fold<int>(
       0,
           (sum, item) => sum + item.quantity,
     );
 
-    final apiService = ProductApiService();
+    //final apiService = ProductApiService();
 
     return Scaffold(
       appBar: AppBar(
@@ -74,40 +74,27 @@ class ProductListScreen extends ConsumerWidget {
         ],
       ),
 
-      body: FutureBuilder<List<dynamic>>(
-        future: apiService.fetchProducts(),
+      body: productsState.when(
+        loading: () {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
 
-        builder: (context, snapshot) {
-          // Loading
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+        error: (error, stackTrace) {
+          return Center(
+            child: Text(
+              'Failed to load products: $error',
+            ),
+          );
+        },
 
-          // Error
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Failed to load products: ${snapshot.error}',
-              ),
-            );
-          }
-
-          // No data
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        data: (products) {
+          if (products.isEmpty) {
             return const Center(
               child: Text('No products found'),
             );
           }
-
-          final products = snapshot.data!
-              .map(
-                (json) => Product.fromJson(
-              Map<String, dynamic>.from(json),
-            ),
-          )
-              .toList();
 
           return ListView.builder(
             itemCount: products.length,
@@ -138,7 +125,7 @@ class ProductListScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              );
+              );c
             },
           );
         },

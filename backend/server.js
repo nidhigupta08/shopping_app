@@ -43,6 +43,31 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
+app.get("/api/products/:id", async (req, res) => {
+  try {
+    const database = client.db("shopping_app");
+    const products = database.collection("products");
+
+    const product = await products.findOne({
+      _id: new ObjectId(req.params.id),
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    res.json(product);
+  } catch (error) {
+    console.error("Failed to fetch product:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch product",
+    });
+  }
+});
+
 app.post("/api/products", async (req, res) => {
   try {
     const { name, price, imageUrl, description } = req.body;
