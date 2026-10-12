@@ -29,6 +29,7 @@ app.get("/", (req, res) => {
 
 app.get("/api/products", async (req, res) => {
   try {
+  //console.log("GET /api/products called");
     const database = client.db("shopping_app");
     const products = database.collection("products");
 

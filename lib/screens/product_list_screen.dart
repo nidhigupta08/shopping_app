@@ -26,6 +26,21 @@ class ProductListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Shopping App'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh products',
+            onPressed: () {
+              ref.invalidate(productProvider);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Refreshing products...'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            icon: const Icon(Icons.refresh),
+          ),
+
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Stack(
@@ -125,7 +140,7 @@ class ProductListScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              );c
+              );
             },
           );
         },
