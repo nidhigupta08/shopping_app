@@ -1,26 +1,48 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/product_search_provider.dart';
 import '../widgets/product_card.dart';
 import 'product_details_screen.dart';
 import 'cart_screen.dart';
 
-class ProductListScreen extends ConsumerWidget {
+class ProductListScreen extends ConsumerStatefulWidget {
   const ProductListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductListScreen> createState() =>
+      _ProductListScreenState();
+}
+
+class _ProductListScreenState
+    extends ConsumerState<ProductListScreen> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cartItems = ref.watch(cartProvider);
     final productsState = ref.watch(productProvider);
+    final searchQuery = ref.watch(productSearchProvider);
 
     final cartCount = cartItems.fold<int>(
       0,
           (sum, item) => sum + item.quantity,
     );
-
-    //final apiService = ProductApiService();
 
     return Scaffold(
       appBar: AppBar(
@@ -40,13 +62,13 @@ class ProductListScreen extends ConsumerWidget {
             },
             icon: const Icon(Icons.refresh),
           ),
-
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 IconButton(
+                  tooltip: 'Shopping cart',
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -57,7 +79,6 @@ class ProductListScreen extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.shopping_cart),
                 ),
-
                 if (cartCount > 0)
                   Positioned(
                     right: 2,
@@ -88,60 +109,133 @@ class ProductListScreen extends ConsumerWidget {
           ),
         ],
       ),
-
       body: productsState.when(
         loading: () {
           return const Center(
             child: CircularProgressIndicator(),
           );
         },
-
         error: (error, stackTrace) {
           return Center(
-            child: Text(
-              'Failed to load products: $error',
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 40,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Failed to load products.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$error',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      ref.invalidate(productProvider);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try again'),
+                  ),
+                ],
+              ),
             ),
           );
         },
-
         data: (products) {
-          if (products.isEmpty) {
-            return const Center(
-              child: Text('No products found'),
-            );
-          }
+          final normalizedQuery = searchQuery.trim().toLowerCase();
 
-          return ListView.builder(
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
+          final filteredProducts = products.where((product) {
+            return product.name
+                .toLowerCase()
+                .contains(normalizedQuery);
+          }).toList();
 
-              return ProductCard(
-                product: product,
-                onAddToCart: () {
-                  ref.read(cartProvider.notifier).addToCart(product);
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    ref
+                        .read(productSearchProvider.notifier)
+                        .setQuery(value);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search products...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: searchQuery.isNotEmpty
+                        ? IconButton(
+                      tooltip: 'Clear search',
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${product.name} added to cart',
-                      ),
-                      duration: const Duration(seconds: 1),
+                        ref
+                            .read(productSearchProvider.notifier)
+                            .setQuery('');
+                      },
+                    )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailsScreen(
-                        product: product,
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+                  ),
+                ),
+              ),
+              Expanded(
+                child: filteredProducts.isEmpty
+                    ? Center(
+                  child: Text(
+                    normalizedQuery.isEmpty
+                        ? 'No products found'
+                        : 'No matching products found',
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = filteredProducts[index];
+
+                    return ProductCard(
+                      product: product,
+                      onAddToCart: () {
+                        ref
+                            .read(cartProvider.notifier)
+                            .addToCart(product);
+
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${product.name} added to cart',
+                            ),
+                            duration:
+                            const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProductDetailsScreen(
+                                  product: product,
+                                ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
